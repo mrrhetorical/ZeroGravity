@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using Mirror;
 using Rhetorical.Server;
 using UnityEngine;
@@ -9,12 +11,16 @@ namespace Rhetorical.Player {
 
 		private Rigidbody2D rb;
 		
-		private Vector2 velocity;
+		private Vector2 gravityDirection = Vector2.zero;
+		private const float gravity = -2f;
 		
 		internal Vector2 moveInput = Vector2.zero;
 		internal Vector2 lookDir = Vector2.right;
 		private bool isHoldingJump = false;
-		private bool isGrounded;
+		private bool isGrounded => groundCheck.isGrounded;
+
+		[SerializeField]
+		private GroundCheck groundCheck;
 
 		[SerializeField]
         private float bulletVelocity = 10f;
@@ -32,6 +38,13 @@ namespace Rhetorical.Player {
 	        if (!isLocalPlayer) {
 		        GetComponent<PlayerInput>().enabled = false;
 	        }
+        }
+
+        public void FixedUpdate() {
+	        if (!isLocalPlayer)
+		        return;
+	        
+	        
         }
         
 		public override void OnStartLocalPlayer() {
@@ -78,7 +91,37 @@ namespace Rhetorical.Player {
 		public void Cmd_KillPlayer(uint killer) {
 			KillPlayer(killer);
 		}
-		
+
+		public void OnCollisionEnter2D(Collision2D collision) {
+			if (!isLocalPlayer)
+				return;
+			
+			if (!collision.transform.CompareTag("Environment"))
+				return;
+
+			if (collision.contactCount <= 0)
+				return;
+
+			Vector2 surfaceNormal = collision.GetContact(0).normal;
+
+			gravityDirection = -surfaceNormal;
+			StartCoroutine(ReevaluateRotation(surfaceNormal, 0.4f));
+			rb.velocity = Vector2.zero;
+			rb.angularVelocity = 0f;
+		}
+
+		private IEnumerator ReevaluateRotation(Vector2 surfaceNormal, float time) {
+			float elapsed = 0f;
+			while (elapsed < time) {
+
+				transform.up = Vector3.Lerp(transform.up, surfaceNormal, elapsed / time);
+				
+				yield return null;
+				elapsed += Time.deltaTime;
+			}
+
+		}
+
 		///// UNITY INPUT EVENTS /////
 
 		public void OnMove(InputAction.CallbackContext context) {

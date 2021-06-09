@@ -14,6 +14,8 @@ namespace Rhetorical.Player {
 				return;
 			
 			other.GetComponent<Player>().KillPlayer(spawner);
+			
+			Destroy(gameObject);
 		}
 	}
 }
